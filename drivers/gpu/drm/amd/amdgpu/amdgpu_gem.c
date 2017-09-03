@@ -315,8 +315,6 @@ int amdgpu_gem_userptr_ioctl(struct drm_device *dev, void *data,
 		goto release_object;
 
 	if (args->flags & AMDGPU_GEM_USERPTR_VALIDATE) {
-		down_read(&current->mm->mmap_sem);
-
 		r = amdgpu_ttm_tt_get_user_pages(bo->tbo.ttm,
 						 bo->tbo.ttm->pages);
 		if (r)
@@ -331,8 +329,6 @@ int amdgpu_gem_userptr_ioctl(struct drm_device *dev, void *data,
 		amdgpu_bo_unreserve(bo);
 		if (r)
 			goto free_pages;
-
-		up_read(&current->mm->mmap_sem);
 	}
 
 	r = drm_gem_handle_create(filp, gobj, &handle);
