@@ -65,6 +65,7 @@
 #include "amdgpu_uvd.h"
 #include "amdgpu_vce.h"
 #include "amdgpu_vcn.h"
+#include "amdgpu_mn.h"
 
 #include "gpu_scheduler.h"
 #include "amdgpu_virt.h"
@@ -178,7 +179,7 @@ struct amdgpu_cs_parser;
 struct amdgpu_job;
 struct amdgpu_irq_src;
 struct amdgpu_fpriv;
-struct amdgpu_mn;
+struct amdgpu_bo_va_mapping;
 
 enum amdgpu_cp_irq {
 	AMDGPU_CP_IRQ_GFX_EOP = 0,
@@ -1197,29 +1198,6 @@ void amdgpu_benchmark(struct amdgpu_device *adev, int test_number);
  * Testing
  */
 void amdgpu_test_moves(struct amdgpu_device *adev);
-
-/*
- * MMU Notifier
- */
-#if defined(CONFIG_MMU_NOTIFIER)
-void amdgpu_mn_lock(struct amdgpu_mn *mn);
-void amdgpu_mn_unlock(struct amdgpu_mn *mn);
-struct amdgpu_mn *amdgpu_mn_get(struct amdgpu_device *adev);
-int amdgpu_mn_register(struct amdgpu_bo *bo, unsigned long addr);
-void amdgpu_mn_unregister(struct amdgpu_bo *bo);
-#else
-static inline void amdgpu_mn_lock(struct amdgpu_mn *mn) {}
-static inline void amdgpu_mn_unlock(struct amdgpu_mn *mn) {}
-static inline struct amdgpu_mn *amdgpu_mn_get(struct amdgpu_device *adev)
-{
-	return NULL;
-}
-static inline int amdgpu_mn_register(struct amdgpu_bo *bo, unsigned long addr)
-{
-	return -ENODEV;
-}
-static inline void amdgpu_mn_unregister(struct amdgpu_bo *bo) {}
-#endif
 
 /*
  * Debugfs
