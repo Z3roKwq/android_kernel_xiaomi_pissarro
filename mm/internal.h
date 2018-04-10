@@ -597,4 +597,6 @@ void setup_zone_pageset(struct zone *zone);
 					zone_idx(z))
 ssize_t print_max_page_owner(void);
 
+extern struct page *alloc_new_node_page(struct page *page, unsigned long node, int **x);
+
 #endif	/* __MM_INTERNAL_H */
