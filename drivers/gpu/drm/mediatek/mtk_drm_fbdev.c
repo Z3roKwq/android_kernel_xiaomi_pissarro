@@ -258,7 +258,7 @@ static int mtk_drm_fbdev_vm_split(struct vm_area_struct *area, unsigned long add
 }
 
 static const struct vm_operations_struct mtk_drm_fbdev_vm_ops = {
-	.split = mtk_drm_fbdev_vm_split,
+	.may_split = mtk_drm_fbdev_vm_split,
 	.close = mtk_drm_fbdev_vm_close,
 };
 
