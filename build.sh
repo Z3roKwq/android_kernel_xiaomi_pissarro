@@ -9,7 +9,7 @@ SECONDS=0
 DATE=$(date '+%Y%m%d-%H%M')
 
 # Device
-DEVICE="${1:-agate}"
+DEVICE="${1:-pissarro}"
 DEFCONFIG="${DEVICE}_defconfig"
 ZIPNAME="HydrogenKernel-${DEVICE}-${DATE}.zip"
 
