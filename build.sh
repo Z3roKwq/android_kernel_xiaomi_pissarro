@@ -1,64 +1,88 @@
 #!/bin/bash
 #
-# Compile script for Hydrogen kernel
-# Brought to you by rio004 
+# Hydrogen Kernel build script
 #
 
-# Date/Time
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
+# Initial Setup
 SECONDS=0
 DATE=$(date '+%Y%m%d-%H%M')
 
-# Device
-DEVICE="${1:-pissarro}"
+DEVICE="pissarro"
 DEFCONFIG="${DEVICE}_defconfig"
 ZIPNAME="HydrogenKernel-${DEVICE}-${DATE}.zip"
-
-echo -e "Building for: $DEVICE\n"
-
-# Ensure the toolchain is available
-TC_DIR="$HOME/toolchains/neutron-clang"
 CURRENT_DIR=$(pwd)
+
+echo -e "Building for device: $DEVICE\n"
+
+# Toolchain Setup
+TC_DIR="$HOME/toolchains/neutron-clang"
 if [ ! -d "$TC_DIR" ]; then
-    mkdir -p $TC_DIR
-    cd $TC_DIR
-    bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") -S=05012024
-    cd $CURRENT_DIR
+    echo "Toolchain not found, downloading neutron-clang..."
+    mkdir -p "$TC_DIR"
+    (cd "$TC_DIR" && bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") -S=05012024)
 fi
 export PATH="$TC_DIR/bin:$PATH"
 
-# Process options
+# Option Handling
 CLEAN_BUILD=false
-INCLUDE_KSU=false
-for arg in "$@"; do
-    case $arg in
-        -c) CLEAN_BUILD=true ;;
-        -ksu) INCLUDE_KSU=true
-             ZIPNAME="HydrogenKernel-KSU-${DEVICE}-${DATE}.zip"
-             ;;
-    esac
-done
+# Check for a argument for cleaning
+if [[ "$1" == "-c" || "$1" == "clean" ]]; then
+    CLEAN_BUILD=true
+fi
 
-[ "$CLEAN_BUILD" = true ] && rm -rf out
-[ "$INCLUDE_KSU" = true ] && echo "Save your stuff!!" && curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+# If the -c flag is specified, perform a full clean
+if [ "$CLEAN_BUILD" = true ]; then
+    echo -e "Performing a full clean...\n"
+    rm -rf out
+fi
 
-# Compilation process
-mkdir -p out
-make O=out ARCH=arm64 $DEFCONFIG
+# Compilation Variables
+export ARCH=arm64
+export SUBARCH=arm64
 
-echo -e "\nStarting compilation...\n"
-if make -j$(nproc --all) O=out ARCH=arm64 CC="ccache clang" AR=llvm-ar NM=llvm-nm LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- Image.gz; then
-    echo -e "\nKernel compiled successfully! Zipping up...\n"
-    git clone -q --depth=1 https://github.com/rio004/AnyKernel3 AnyKernel3
-    cp out/arch/arm64/boot/Image.gz AnyKernel3
-    rm -rf *zip out/arch/arm64/boot
-    (cd AnyKernel3 && zip -r9 "../$ZIPNAME" * -x '*.git*' README.md *placeholder)
+# Optimizations for Neutron Clang
+export KBUILD_GLOBAL_CFLAGS="-O3 -flto=thin"
+export KBUILD_GLOBAL_CPPFLAGS="-O3 -flto=thin"
+
+# Apply defconfig
+make O=out "$DEFCONFIG"
+
+echo -e "\nStarting kernel compilation...\n"
+
+# Start the build for Image.gz and dtbo.img
+if make -j$(nproc --all) \
+    O=out \
+    CC="ccache clang" \
+    AR=llvm-ar \
+    NM=llvm-nm \
+    LD=ld.lld \
+    STRIP=llvm-strip \
+    LLVM=1 \
+    LLVM_IAS=1 \
+    CROSS_COMPILE=aarch64-linux-gnu- \
+    CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+    Image.gz; then
+
+    echo -e "\nKernel compiled successfully! Packing into a zip archive...\n"
+
+    # Cloning AnyKernel3
+    git clone -q --depth=1 https://github.com/Z3roKwq/AnyKernel3 AnyKernel3
+
+    # Copying the compiled images
+    cp out/arch/arm64/boot/Image.gz AnyKernel3/
+
+    # Creating the zip archive
+    (cd AnyKernel3 && zip -r9 "../$ZIPNAME" ./* -x '*.git*' README.md '*placeholder')
+
+    # Cleanup
     rm -rf AnyKernel3
-    if [ "$INCLUDE_KSU" = true ]; then
-        git restore drivers/{Makefile,Kconfig}
-        rm -rf KernelSU drivers/kernelsu
-    fi
-    echo -e "\nCompleted in $((SECONDS / 60)) minute(s) and $((SECONDS % 60)) second(s)!"
-    echo "Zip: $ZIPNAME"
+
+    echo -e "\nFinished in $((SECONDS / 60)) min(s) and $((SECONDS % 60)) sec(s)!"
+    echo "Kernel installer zip: $ZIPNAME"
 else
-    echo -e "\nCompilation failed!"
+    echo -e "\nBuild failed!"
+    exit 1
 fi
