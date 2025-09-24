@@ -21,7 +21,7 @@ CURRENT_DIR=$(pwd)
 if [ ! -d "$TC_DIR" ]; then
     mkdir -p $TC_DIR
     cd $TC_DIR
-    bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") -S=11032023
+    bash <(curl -s "https://raw.githubusercontent.com/Neutron-Toolchains/antman/main/antman") -S=05012024
     cd $CURRENT_DIR
 fi
 export PATH="$TC_DIR/bin:$PATH"
@@ -46,7 +46,7 @@ mkdir -p out
 make O=out ARCH=arm64 $DEFCONFIG
 
 echo -e "\nStarting compilation...\n"
-if make -j$(nproc --all) O=out ARCH=arm64 CC="ccache clang" LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- Image.gz; then
+if make -j$(nproc --all) O=out ARCH=arm64 CC="ccache clang" AR=llvm-ar NM=llvm-nm LLVM=1 LLVM_IAS=1 CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- Image.gz; then
     echo -e "\nKernel compiled successfully! Zipping up...\n"
     git clone -q --depth=1 https://github.com/rio004/AnyKernel3 AnyKernel3
     cp out/arch/arm64/boot/Image.gz AnyKernel3
